@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html ng-app="chatApp">
+<head>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width">
+    <title>Chat</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="angular/angular.min.js"></script>
+    <script src="main.js"></script>
+    <script src="chatBox.js"></script>
+    <script src="videostream.js"></script>
+    <script src="videoplayer.js"></script>
+    <script src="webcam.min.js"></script>
+    <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
+     <!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+
+<!-- jQuery library -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+
+<!-- Latest compiled JavaScript -->
+<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+</head>
+<body>
+      <nav class="navbar navbar-inverse">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="#">AngularWebRTC</a>
+    </div>
+    <div class="collapse navbar-collapse" id="myNavbar">
+      <ul class="nav navbar-nav">
+        <li class="active"><a href="#">Home</a></li>
+        <li><a href="#/chat">Chat</a></li>
+        <li><a href="#/about">About</a></li>
+        <li><a href="#/help">Help</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+    <div ng-controller="ChatCtrl">
+        <div class="form">
+            <h3 class="title">Change Name:</h3>
+            <input class="usernameInput" type="text" maxlength="14" />
+        </div>
+        <br>
+        <div id="chatWrap">
+            <p ng-repeat="msg in msgs track by $index">{{msg}}</p>
+        </div>
+        <form ng-submit="sendMsg()" action="">
+            <input type="text" ng-model="msg.text" />
+        </form>
+        
+    
+        
+        <h2>Video Chat</h2>
+        <div id="video-container">
+        <!-- note the 'autoplay' -->
+        Their video: <video id="theirVideo" class="theirVideo" autoplay></video>
+        <video id="myVideo" muted="true" class="myVideo" autoplay></video> : Your video
+        </div>
+
+        <h2>Controls</h2>
+        <div>
+        <p><a href="#" id="makeCall">Call</a></p>
+        <p><a href="#" id="endCall">End call</a></p>
+        </div>
+    </div>
+    
+    <div class="container">
+    <div ng-view=""></div>
+    </div>
+</body>    
+</html>

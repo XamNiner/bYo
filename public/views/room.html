@@ -1,0 +1,13 @@
+<div id="chatWrap">
+            <p ng-repeat="msg in msgs track by $index">{{msg}}</p>
+        </div>
+        <form ng-submit="sendMsg()" action="">
+            <input type="text" ng-model="msg.text" />
+        </form>
+        
+        
+     <webcam channel= "channel"
+        on-streaming= "onSuccess()"
+        on-error= "onError(err)"
+        on-stream= "onStream(stream)"
+        placeholder="'ajax_loader_gray_350.gif'"></webcam>

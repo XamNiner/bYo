@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html ng-app="chatApp">
+
+<head>
+   <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+
+    <!-- jQuery library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+
+    <!-- Latest compiled JavaScript -->
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script> 
+    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+</head>
+    
+<body>
+    <div ng-controller="ChatCtrl">
+        <div id="videos">
+        <button ng-click="getCam()">Load Camera</button>
+        <video id="myVideo" autoplay muted></video>
+        <video id="theirVideo" autoplay></video>
+        <input id="vidCallButton" type="button" disabled value="Video Call" />
+        <input id="endCallButton" type="button" disabled value="End Call" />
+        </div>
+        <div style="float:left; width:100px; border-right:1px solid black; height:300px; padding:10px; padding:10px; overflow: scroll-y;">
+            <b>ROOMS</b>
+            <div id="rooms"></div>
+        </div>
+        
+        <div style="float:left; width:300px; height:250px; overflow:scroll-y; padding:10px;">
+            <div id="conversation"></div>
+            <input id="data" style="width:200px;" />
+            <input type="button" id="datasend" value="send" />
+            <br>
+            <br>
+            name: <input ng-model="name">
+            <h1>You entered: {{name}}</h1>
+        </div>  
+    </div>
+    <script src="chat.js"></script>
+    <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="angular/angular.min.js"></script>
+    <script src="adapter.js"></script>
+</body>    
+</html>
