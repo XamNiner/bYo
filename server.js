@@ -92,27 +92,9 @@ io.on('connection', function (socket) {
         socket.leave(socket.room);
     });
     
-    //NEW Socket events to establish peer connection
-    //offer sdp to another peer
-    socket.on('send:offer', function(offer) {
-        console.log('Sending new sdp offer to client.');
-       io.sockets.in(socket.room).emit('message', {
-            offer: offer       
-       }); 
-    });
+
     
-    //send sdp answer to the caller
-    socket.on('send:answer', function(answer){
-        console.log('Answering another clients sdp call');
-        io.sockets.in(socket.room).emit('message', {
-            answer: answer 
-        });
-    });
-    
-    socket.on('new:ice', function(candidate) {
-        console.log('Adding a new ice candidate');
-        io.sockets.in(socket.room).emit('message', {
-            candidate: candidate
-        });
-    });
+    socket.on('test', function(data){
+        console.log('Button works!');
+    })
 });

@@ -7,16 +7,18 @@
 
     <!-- jQuery library -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-
     <!-- Latest compiled JavaScript -->
-    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script> 
     <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script> 
 </head>
     
 <body>
     <div ng-controller="ChatCtrl">
         <div id="videos">
         <button ng-click="getCam()">Load Camera</button>
+        <button ng-click="peer()" ng-disabled="calling">Call Peer</button>
+        <button ng-click="endCall()" ng-disabled="!calling">Hang Up</button>    
+
         <video id="myVideo" autoplay muted></video>
         <video id="theirVideo" autoplay></video>
         <input id="vidCallButton" type="button" disabled value="Video Call" />
@@ -37,9 +39,8 @@
             <h1>You entered: {{name}}</h1>
         </div>  
     </div>
-    <script src="chat.js"></script>
-    <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="adapter.js"></script>
+    <script src="chat.js"></script>
 </body>    
 </html>
