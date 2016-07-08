@@ -190,11 +190,10 @@ app.controller('ChatCtrl', function($scope, socket) {
     
     //end a running call with a peer
     function endCall() {
+        //reset button attributes
+        $scope.calling = false;
         peerConn.close();
         peerConn = null;
-        //reset button attributes
-        vidCallButton.removeAttribute('disabled');
-        endCall.setAttribute('disabled', true);
         localVidStream.getTracks().forEach(function(track) {
             track.stop();
         });

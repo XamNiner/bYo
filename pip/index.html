@@ -3,7 +3,8 @@
 
 <head>
    <!-- Latest compiled and minified CSS -->
-    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.6/flatly/bootstrap.min.css" rel="stylesheet" integrity="sha384-XYCjB+hFAjSbgf9yKUgbysEjaVLOXhCgATTEBpCqT1R3jvG5LGRAK5ZIyRbH5vpX" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/style.css">
 
     <!-- jQuery library -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
@@ -13,17 +14,41 @@
 </head>
     
 <body>
+    
+    <nav class="navbar navbar-default navbar-fixed-top">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="#">AngularWebRTC</a>
+    </div>
+    <div class="collapse navbar-collapse" id="myNavbar">
+      <ul class="nav navbar-nav">
+        <li class="active"><a href="#">Home</a></li>
+        <li><a href="#/chat">Chat</a></li>
+        <li><a href="#/about">About</a></li>
+        <li><a href="#/help">Help</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
     <div ng-controller="ChatCtrl">
-        <div id="videos">
-        <button ng-click="getCam()">Load Camera</button>
-        <button ng-click="peer()" ng-disabled="calling">Call Peer</button>
-        <button ng-click="endCall()" ng-disabled="!calling">Hang Up</button>    
+        <div class="container">
+            <div class="jumbotron">
+                <div class="btn-group-vertical">
+                    <button type="button" class="btn btn-primary" ng-click="getCam()">Load Camera</button>
+                    <button type="button" class="btn btn-primary" ng-click="peer()" ng-disabled="calling">Call Peer</button>
+                    <button type="button" class="btn btn-primary" ng-click="endCall()" ng-disabled="!calling">Hang Up</button>
+                </div>
 
-        <video id="myVideo" autoplay muted></video>
-        <video id="theirVideo" autoplay></video>
-        <input id="vidCallButton" type="button" disabled value="Video Call" />
-        <input id="endCallButton" type="button" disabled value="End Call" />
+                <video id="myVideo" autoplay muted></video>
+                <video id="theirVideo" autoplay></video>
+            </div>
         </div>
+
         <div style="float:left; width:100px; border-right:1px solid black; height:300px; padding:10px; padding:10px; overflow: scroll-y;">
             <b>ROOMS</b>
             <div id="rooms"></div>
