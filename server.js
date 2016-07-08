@@ -53,19 +53,22 @@ io.on('connection', function (socket) {
     socket.on('send:msg', function(data) {
         //update the chat in the assigned room
         io.sockets.in(socket.room).emit('update:chat', socket.username, data);
+        console.log('Send Message: '+JSON.stringify(data));
     });
     
     //changing from one room to another
     socket.on('switch:room', function(newroom) {
        //leave the old room
         socket.leave(socket.room);
+        console.log('Leaving room '+socket.room);
         
         //join new room
         socket.join(newroom);
         socket.emit('update:chat', 'SERVER', 'You have connected to room '+newroom);
+        console.log('Now entering room '+newroom);
         
         //tell old room that you have quit
-        socket.broadcast.to(socket.room).emit('update:chat', 'SERVER', socket.username + ' has quit.');
+        socket.broadcast.to(socket.room).emit('update:chat', 'SERVER', socket.username + ' has quit the room.');
         
         //update the socket session room title
         socket.room = newroom;
@@ -78,6 +81,7 @@ io.on('connection', function (socket) {
     //handle client disconnect
     socket.on('disconnect', function() {
         //delete the assigned username from the list of users
+        console.log(socket.username + ' has disconnected.');
         delete usernames[socket.username];
         
         //update username list
@@ -88,4 +92,24 @@ io.on('connection', function (socket) {
         socket.leave(socket.room);
     });
     
+    //NEW Socket events to establish peer connection
+    //offer sdp to another peer
+    socket.on('send:offer', function(offer) {
+       io.sockets.in(socket.room).emit('message', {
+            offer: offer       
+       }); 
+    });
+    
+    //send sdp answer to the caller
+    socket.on('send:answer', function(answer){
+        io.sockets.in(socket.room).emit('message', {
+            answer: answer 
+        });
+    });
+    
+    socket.on('new:ice', function(candidate) {
+        io.sockets.in(socket.room).emit('message', {
+            candidate: candidate
+        });
+    });
 });
