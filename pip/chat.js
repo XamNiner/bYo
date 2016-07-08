@@ -2,7 +2,7 @@ var app = angular.module('chatApp', [])
 
 
 app.factory('socket', function() {
-    var socket = io.connect('http://p2psocket.heroku.com');
+    var socket = io.connect();
     return socket;
 })
 
