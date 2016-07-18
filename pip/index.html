@@ -15,40 +15,74 @@
     
 <body>
     
-    <nav class="navbar navbar-default navbar-fixed-top">
-  <div class="container-fluid">
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
-      <a class="navbar-brand" href="#">AngularWebRTC</a>
-    </div>
-    <div class="collapse navbar-collapse" id="myNavbar">
-      <ul class="nav navbar-nav">
-        <li class="active"><a href="#">Home</a></li>
-        <li><a href="#/chat">Chat</a></li>
-        <li><a href="#/about">About</a></li>
-        <li><a href="#/help">Help</a></li>
-      </ul>
-    </div>
-  </div>
-</nav>
-    <div ng-controller="ChatCtrl">
-        <div class="container">
-            <div class="jumbotron">
-                <div class="btn-group-vertical">
-                    <button type="button" class="btn btn-primary" ng-click="getCam()">Load Camera</button>
-                    <button type="button" class="btn btn-primary" ng-click="peer()" ng-disabled="calling">Call Peer</button>
-                    <button type="button" class="btn btn-primary" ng-click="endCall()" ng-disabled="!calling">Hang Up</button>
-                </div>
-
-                <video id="myVideo" autoplay muted></video>
-                <video id="theirVideo" autoplay></video>
-            </div>
+    <nav class="navbar navbar-default navbar-static-top navbar-fixed-top">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">AngularWebRTC</a>
         </div>
-
+        <div class="collapse navbar-collapse" id="myNavbar">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#">Home</a></li>
+            <li><a href="#/chat">Chat</a></li>
+            <li><a href="#/about">About</a></li>
+            <li><a href="#/help">Help</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    
+    <div ng-controller="ChatCtrl">
+        <div ng-show="noMedia">
+            <h2>Can't stream Video because getUserMedia is not available in your browser.</h2>
+            <h2>Please use Firefox or Chrome!</h2>
+        </div>
+        
+        <div ng-show="noCamera">Access to camera was not granted. Please reload your browser and press allow when asked for permission!
+        </div>
+        
+        <div class="container" ng-show="!noMedia">
+            <div class="jumbotron">
+                <h2>LocalVideo</h2>
+                <video id="localVideo" autoplay muted></video>
+                <h2>Remote Video</h2>
+                <video id="remoteVideo" autoplay></video>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary" ng-click="getLocalVideo()">Local</button>
+                    <button type="button" class="btn btn-primary" ng-click="onCall()" ng-disabled="gumedia">Call</button>
+                    <button type="button" class="btn btn-primary" ng-click="hangUp()" ng-disabled="!inCall">Hang Up</button>
+                </div>
+            </div>
+        </div> 
+        <div>
+            <input type="text" placeholder="Call user id..." ng-model="peerId">
+            <button type="button" class="btn btn-primary" ng-click="sendRequest()" ng-disabled="gumedia">Request</button>
+        </div>
+        <br>
+        <br>
+        <div ng-show="!noMedia">
+            <input type="text" placeholder="Set your id..." ng-model="ownId">
+            <button type="button" class="btn btn-primary" ng-click="makeId()">Set Peer Id</button>
+        </div>
+        <p>Peer ID: {{setId}}</p>
+        <div>
+            <h2>Usernames:</h2>
+            <ul>
+                <li ng-repeat="user in userNames track by $index">{{user}}</li>
+            </ul>
+        </div>
+        <div>
+            <h2>Peer Ids:</h2>
+            <ul>
+                <li ng-repeat="ids in pids track by $index">{{ids}}</li>
+            </ul>
+        </div>
+       <!-- <select ng-model="selectedName" ng-options="user in userNames"></select> !-->
+        
         <div style="float:left; width:100px; border-right:1px solid black; height:300px; padding:10px; padding:10px; overflow: scroll-y;">
             <b>ROOMS</b>
             <div id="rooms"></div>
@@ -60,11 +94,9 @@
             <input type="button" id="datasend" value="send" />
             <br>
             <br>
-            <!-- Just test field remove later -->
-            name: <input ng-model="name">
-            <h1>You entered: {{name}}</h1>
         </div>  
     </div>
+    <script src="http://cdn.peerjs.com/0.3/peer.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="adapter.js"></script>
     <script src="chat.js"></script>

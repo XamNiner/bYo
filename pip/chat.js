@@ -27,20 +27,46 @@ app.factory('socket', function ($rootScope) {
 
 app.controller('ChatCtrl', function($scope, socket) {
     //client side implementation
-    $scope.calling = false;
-    $scope.count = 0;
-    var channelReady = false;
+    $scope.calling = false;     //check if client is currently in a call
+    $scope.userNames = [];      //list of usernames
+    var channelReady = false;   //check if localStream is available before calling
+    var praxis = 'pr23';        //praxis number to create a peer id
+    
+    $scope.id = 5;
+    
+    //own name
+    $scope.name = null;
+    
+    //show warning if no user media found or camera access granted
+    $scope.noMedia = false;
+    $scope.noCamera = false;
+    
+    //check if getUserMedia is available
+    if (navigator.mediaDevices === undefined) {
+            $scope.noMedia = true;
+    }
+    
+    
     //ask for username upon connection
     socket.on('connect', function() {
         //prompt user to enter a username
-        socket.emit('add:user', prompt("Enter a username!"));
-        //established socket connection with server
-        channelReady = true; //can send data to other peers
+       $scope.name = prompt('Enter a username!');
+        socket.emit('add:user', $scope.name);
     });
     
     //listen for chat updates from the server
     socket.on('update:chat', function(username, data) {
         $('#conversation').append('<b>'+username+' :</b> ' + data + '<br>');
+    });
+    
+    //assign unique id to the client
+    socket.on('add:id', function(id) {
+       $scope.id = id; 
+    });
+    
+    //listen for user changes
+    socket.on('update:user', function(uData) {
+        $scope.userNames = uData;
     });
     
     //listen for room changes
@@ -53,6 +79,11 @@ app.controller('ChatCtrl', function($scope, socket) {
                 $('#rooms').append('<div> <a href="#" onclick="switchRoom(\''+value+'\')">' + value + '</a></div>');
             }
         });
+    });
+    
+    //logging the server messages
+    socket.on('log', function(array) {
+        console.log.apply(console, array);
     });
     
     //switch to a different room
@@ -80,13 +111,10 @@ app.controller('ChatCtrl', function($scope, socket) {
         });
     });
     
+    //------------------------------------------------------
     //ui elements 
     var myVideo = document.getElementById('myVideo'),
-        theirVideo = document.getElementById('theirVideo'),
-        localVidStream = null,
-        vidCallButton = document.getElementById('vidCallButton'),
-        endCallButton = document.getElementById('endCallButton');
-            
+        theirVideo = document.getElementById('theirVideo');
     
     //establish a new peer connection
     var peerConn = null,
@@ -101,123 +129,361 @@ app.controller('ChatCtrl', function($scope, socket) {
         var video = document.getElementById('myVideo');
         video.src = URL.createObjectURL(stream);
         }, function(err) {
+            $scope.noCamera = true;
             console.log('An error occured: '+err.name);
         }); 
     };
+
+    $scope.gumError = false; 
     
-    //assign listener to the connection buttons
+    var isChannelReady = false; //wait till another client connects to the room
+    var isInitiator = false;
+    var isStarted = false;
+    var localStream;
+    var pc;     //p2p connection 
+    var remoteStream;
+    var turnReady; //turn server als fallback
+
+    var pcConfig = {
+      'iceServers': [{
+        'url': 'stun:stun.l.google.com:19302'
+      }]
+    };
+
+    // Set up audio and video regardless of what devices are present.
+    var sdpConstraints = {
+      'mandatory': {
+        'OfferToReceiveAudio': true,
+        'OfferToReceiveVideo': true
+      } 
+    };
     
-    //vidCallButton.addEventListener('click', initCall());
-    //endCallButton.addEventListener('click', endCall());
-    
-    //call button
-    $scope.peer = function() {
-        $scope.calling = true;
-        initCall();
+    //room shenanigans
+    //
+    //send connection messages
+    function sendMessage(message) {
+        console.log('Client sending message: ', message);
+        socket.emit('message', message);
     }
-    
-    //call a remote peer
-    function initCall(){
-        socket.emit('test', '123');
-        prepareCall();
-        navigator.getUserMedia({audio:true, video:true}, function(stream) {
-            localVidStream = stream;
-            myVideo.src = URL.createObjectURL(localVidStream);
-            peerConn.addStream(localVidStream);
-            createAndSendOffer();
-        }, function(error){console.log(error);});
-    }
-    
-    //create new connection and add listeners
-    function prepareCall() {
-        peerConn = new RTCPeerConnection(peerConnCfg);
-        peerConn.onicecandidate = onIceCandidateHandler;
-        peerConn.onaddstream = onAddStreamHandler;
-    }
-    
-    //handler for new ice candidate
-    function onIceCandidateHandler(evt){
-        if (!evt || !evt.candidate) {
-            //emit new candidate
-            socket.emit('new:ice', evt);
-        }
-    }
-    
-    //handler for new stream object
-    function onAddStreamHandler(evt){
-        vidCallButton.setAttribute('disabled', true);
-        endCallButton.removeAttribute('disabled');
-        theirVideo.src = URL.createObjectURL(evt);
-    }
-    
-    //invite the peer to join the chat
-    function createAndSendOffer(){
-        peerConn.createOffer(
-            function(offer) {
-                var off = new RTCSessionDescription(offer);
-                peerConn.setLocalDescription(new RTCSessionDescription(off),
-                    function(){
-                        socket.emit('send:offer', off);
-                    }, function(error){console.log(error);}
-                );
-            }, function(error) {console.log(error)}
-        );
-    }
-    
-    //answer another peers offer
-    function answerCall(){
-        prepareCall();
-        //display local stream and send it to the caller
-        navigator.getUserMedia({audio:true, video:true}, function(stream) {
-            localVidStream = stream;
-            myVideo.src = URL.createObjectURL(localVidStream);
-            peerConn.addStream(localVidStream);
-            createAndSendAnswer();
-        }, function(err){ console.log(err)}
-        );
-    }
-    
-    function createAndSendAnswer(){
-        peerConn.createAnswer(
-            function(answer){
-               var ans = new RTCSessionDescription(answer);
-                peerConn.setLocalDescription(ans, function(){
-                    socket.emit('send:answer', ans)
-                }, function(error){console.log(error);}
-                );
-            }, function(error){console.log(error);});
-    }
-    
-    //end a running call with a peer
-    function endCall() {
-        //reset button attributes
-        $scope.calling = false;
-        peerConn.close();
-        peerConn = null;
-        localVidStream.getTracks().forEach(function(track) {
-            track.stop();
+
+    // This client receives a message
+    socket.on('message', function(message) {
+        console.log('Client received message:', message);
+        //client is called by another peer
+        //setup a new peer connection
+        if (message.type === 'offer') {
+            console.log('received an offer');
+            if (!isInitiator && !isStarted) {
+                beginAnswering();
+            }
+            pc.setRemoteDescription(new RTCSessionDescription(message));
+            doAnswer();
+        } else if (message.type === 'answer' && isStarted) {
+            pc.setRemoteDescription(new RTCSessionDescription(message));
+        } else if (message.type === 'candidate' && isStarted) {
+            var candidate = new RTCIceCandidate({
+            sdpMLineIndex: message.label,
+            candidate: message.candidate
         });
-        //reset the video stream elements
-        myVideo.src = '';
-        theirVideo.src = '';
+        pc.addIceCandidate(candidate);
+        } else if (message === 'bye' && isStarted) {
+            handleRemoteHangup();
+        }
+    });
+    
+    //init a new peer connection upon receiving an sdp offer
+    function beginAnswering() {
+        console.log('Channel is ready: '+ isChannelReady);
+        //receiveLocalVideo();
+        console.log('Started: '+isStarted+' LocalStream: '+ localStream +' Channel Ready? '+ isChannelReady);
+        if (!isStarted && typeof localStream !== 'undefined' && isChannelReady) {
+            console.log('ENTERED!!!')
+            //change button access - able to hang up on the caller
+            $scope.gumedia = true;
+            $scope.inCall = true;
+        
+            //create new RTCPeerConnection
+        
+            createPeerConnection();
+            pc.addStream(localStream);
+            isStarted = true;
+        }
+    }
+
+    var localVideo = document.getElementById('localVideo'),
+        remoteVideo = document.getElementById('remoteVideo');
+        $scope.gumedia = true;
+        $scope.inCall = false;
+    
+    //function for button click
+    $scope.getLocalVideo = function(){
+        receiveLocalVideo();
+    }
+
+    function receiveLocalVideo() {
+        if (navigator.mediaDevices.getUserMedia !== 'undefined') {
+            //get the video stream
+            $scope.gumedia = false;
+            console.log('getUserMedia active');
+            navigator.mediaDevices.getUserMedia({audio: true, video: true})
+            .then(createStream)
+            .catch(function(e) {
+                $scope.noCamera = true;
+                alert('getUserMedia error: ' + e.name);
+            });
+            console.log('AFTER STREAM');
+        } else {
+            $scope.noMedia = true;
+            console.log('getUserMedia is not supported in this browser!');
+        }
     }
     
-    //special message from another peer
-    socket.on('message', onMessage);
+    function createStream(stream){
+        console.log('Adding local stream');
+        localVideo.src = window.URL.createObjectURL(stream);
+        localStream = stream;
+        console.log('The local stream has been initialized: '+localStream);
+        sendMessage('got user media');
+        //got local stream --> can begin calling other peers
+        isChannelReady = true;
+    }
     
-    function onMessage(evt) {
-        var signal = null;
-        //auto answer to call
-        if (!peerConn) {
-            answerCall();
+    $scope.onCall = function() {
+        console.log('Init a new peer connection');
+        console.log('Started: '+isStarted+' LocalStream: '+(typeof localStream)+' Channel Ready? '+ isChannelReady);
+        if (!isStarted && typeof localStream !== 'undefined' && isChannelReady) {
+            //change button access
+            $scope.gumedia = true;
+            $scope.inCall = true;
+        
+            //init a new peer connection
+            createPeerConnection();
+            pc.addStream(localStream);
+            isStarted = true;
+            isInitiator = true;
+            //send the sdp offer to another peer
+            doCall();
         }
-        signal = JSON.parse(evt.data);
-        if (signal.sdp) {
-            peerConn.setRemoteDescription(new RTCSessionDescription(signal.sdp));
-        } else if (signal.candidate) {
-            peerConn.addIceCandidate(new RTCIceCandidate(signal.candidate));
-        } else if (signal.closeConnection) {
-            endCall;
+    }
+    
+    
+    function createPeerConnection(){
+        try {
+            console.log('>>>>>> creating peer connection');
+            pc = new RTCPeerConnection(null);
+            
+            //add event handler
+            pc.onicecandidate = handleIceCandidate;
+            pc.onaddstream = handleRemoteStreamAdded;
+            pc.onremovestream = handleRemoteStreamRemove;
+        }catch (e) {
+            console.log('Failed to create PeerConnection, exception: ' + e.message);
+            alert('Cannot create RTCPeerConnection object.');
         }
-    }  
+        return;
+    }
+    
+    //add new ice candidates
+    function handleIceCandidate(evt) {
+        console.log('New ICE candidate: ', evt);
+        
+        if(evt.candidate) {
+            sendMessage({
+                type: 'candidate',
+                label: evt.candidate.sdpMLineIndex,
+                id: evt.candidate.sdpMid,
+                candidate: evt.candidate.candidate
+            });
+        } else {
+            console.log('End of candidates');
+        }
+    }
+    
+    //add another peers video stream to your browser
+    function handleRemoteStreamAdded(evt) {
+        console.log('Remote stream added.');
+        remoteVideo.src = window.URL.createObjectURL(evt.stream);
+        remoteStream = evt.stream;
+    }
+    
+    //problem sending the offer to another peer
+    function handleCreateOfferError(evt) {
+        console.log('Create SDP-offer error: ', evt);
+    }
+    
+    //delete a remote stream
+    function handleRemoteStreamRemove(evt) {
+        console.log('Removed a remote stream Event: ', evt);
+    }
+    
+    //construction of new sdp offer
+    function doCall() {
+        console.log('Sending offer to peer');
+        pc.createOffer(setLocalandSendMessage, handleCreateOfferError);
+    }
+    
+    //construction of new sdp answer
+    function doAnswer(sessionDescription) {
+        console.log('Sending answer to peer');
+        pc.createAnswer().then(
+        setLocalandSendMessage, onCreateSessionDescriptionError);
+    }
+    
+    function onCreateSessionDescriptionError(error){
+        console.log('Encountered an error while creating the SessionDescription: ', error);    
+    }
+            
+    function setLocalandSendMessage(sessionDescription) {
+        console.log('Sending the sesssion description: ', sessionDescription);
+        //set the session description locally
+        sendMessage(sessionDescription);
+        pc.setLocalDescription(sessionDescription);
+    }
+        
+    //---------------------------------------------------
+    //stop a running p2p call
+    $scope.hangUp = function() {
+        console.log('Stopping the running call');
+        stop();
+        isInitiator = false;
+        //disable hangup allow calling again
+        $scope.inCall = false;
+        sendMessage('bye');
+        
+        //delete the video track 
+        //var vidTrack = remoteStream.getVideoTracks();
+        //remoteStream.removeTrack(vidTrack[0]);
+    };
+    
+    //the caller has ended the call
+    function handleRemoteHangup() {
+        console.log('Caller has ended the call');
+        stop();
+        $scope.inCall = false;
+    }
+    
+    function stop() {
+        console.log('Stopping peer connection');
+        isStarted = false;
+        //close the connection
+        pc.removeStream(remoteStream);
+        pc.close;
+        pc = null;
+    }
+    
+    //end any calls when reloading or closing the page
+    window.onbeforeunload = function() {
+        sendMessage('bye');
+    }
+    
+    //----------------------------------
+    //send peer connection request to this id
+    $scope.peerId;  //id of the object to be called
+    $scope.ownId;   //set last id numbers yourself 
+    $scope.setId = 42; //standard
+    
+    //add your own id suffix
+    $scope.makeId = function() {
+        //create an id from praxis number, username and suffix
+        //complete version
+        $scope.setId = praxis+''+$scope.name+''+$scope.ownId;
+        console.log('Setting own id from '+$scope.setId+' to '+$scope.ownId);
+        //send complete peer id to all clients
+        socket.emit('update:pid', $scope.setId);
+    }
+    
+    //show Ids of all connected peers(+ own)
+    socket.on('get:pid', function(peerIds) {
+        console.log('updating the peer ids');
+        $scope.pids = peerIds; 
+    });
+    
+    //request a peer connection from another client
+    $scope.sendRequest = function() {
+        console.log('sending request to establish peer connection');
+        var message = 'request';
+        console.log('Check - '+$scope.setId+' - '+$scope.peerId);
+        var a = $scope.setId,
+            b = $scope.peerId,
+            data = {
+                sender: a,
+                receiver: b,
+                message: message
+            };
+        sendPrivateMessage(data);
+        console.log('Value in peerId '+$scope.peerId);
+        //socket.emit('make:request', $scope.peerId);
+    }
+    
+    socket.on('got:requested', function(clientId) {
+        //another peer sent a connection request
+        //check id if client is being called
+        console.log('Peer requested connection.');
+        if (clientId === $scope.setId) {
+            console.log('You are being called!');
+            var p = window.confirm('Accept the peers call?');
+            if (p == true) {
+                console.log('Pressed okay');
+            } else {
+                console.log('Pressed cancel');
+            }
+        } else {
+            console.log('Not you!');
+        }
+    });
+    
+    //emitting private message to another peer
+    function sendPrivateMessage(data) {
+        console.log('Sender id: '+data.sender+' and Receiver id: '+data.receiver);
+        console.log('Sending private message: '+ data.message);
+        socket.emit('private:msg', data);
+    }
+    
+    //deal with private messages
+    socket.on('get:pvtmsg', function(data) {
+        //peer connection request from another client
+        if (data.receiver === $scope.setId) {
+            console.log('Got the right client');
+            if (data.message === 'request') {
+                console.log('>>>>>>>>>>>request start')
+                var p = window.confirm("Accept another peers request to establish a peer connection?");
+                if (p == true) {
+                    //accepted
+                    console.log('Accepted the other clients request!');
+                    txt = "You pressed OK!";
+                    //accepting the peers call
+                    var answer = {
+                            sender: data.receiver,
+                            receiver: data.sender,
+                            message: 'answer'
+                    };
+                    //send answer to caller
+                    sendPrivateMessage(answer);
+                } else {
+                    //refused connection
+                    console.log('Denied the other clients request!');
+                    txt = "Pressed Cancel!";
+                    //send refusal back to sender
+                    var denied = {
+                            sender: data.receiver,
+                            receiver: data.sender,
+                            message: 'denied'
+                    };
+                    sendPrivateMessage(denied);
+                }    
+            } else if (data.message === 'answer') {
+                console.log('Client with id - '+data.sender+' answered your call.');
+                
+                //other peer accepted the request - init new peer connection
+                
+                
+            } else if (data.message === 'denied') {
+                console.log('Client with id - '+data.sender+' refused the connection.');
+                //display refusal
+                window.alert('Client refused your connection! Please try again.');
+            } else {
+                console.log('Received remote message!');
+            } 
+        }
+    });
 })

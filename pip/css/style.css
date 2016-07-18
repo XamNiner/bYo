@@ -1,6 +1,9 @@
-body    { padding-top:20px; }
+body    { padding-top:70px; }
 .container 
 .jumbotron{ 
     border-radius:40px;
     border-bottom: 0;
+}
+.navbar{
+    margin-bottom: : 50px !important;
 }

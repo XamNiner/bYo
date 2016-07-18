@@ -18,23 +18,46 @@ app.use(express.static(__dirname + '/pip'));
 
 // Chatroom - names of all users
 var usernames = {};
+
+//peer ids for all users
+var peerIds = {};
+
 //available rooms to join
 var rooms = ['room1', 'room2', 'room3'];
 //track people in room
 var roommates = [];
 
+//count number of users
+var userNumber = 0;
+
 //socket io event handling
 io.on('connection', function (socket) {
     var address = socket.handshake.address;
+    var id = 12;
+    
+    //logging server events
+    function log() {
+        var array = ['Message from server:'];
+        array.push.apply(array, arguments);
+        socket.emit('log', array);
+    }
+    
     //client emits add:user to add new user to the room
     socket.on('add:user', function(username) {
+        //give the user a unique id
+        socket.broadcast.emit('add:id', id);
+        id++;
+        userNumber++;
+        console.log('next id is '+id);
         console.log('added new user');
         //store the name
         socket.username = username;
         
         //add client name to list of users
-        usernames[username] = username;
-        
+        var zu = username+' - SocketID: '+socket.id;
+        usernames[username] = zu;
+        io.sockets.emit('update:user', usernames);
+        io.sockets.emit('get:pid', peerIds);
         //set the standard room
         socket.room = 'room1';
         
@@ -78,23 +101,64 @@ io.on('connection', function (socket) {
         socket.emit('update:rooms', rooms, newroom);
     });
     
+    //sending rtc peer connection messages between peers
+    socket.on('message',function(message) {
+        //send to all other clients excluding creator
+        log('Client send message: ', message);
+        socket.broadcast.emit('message', message);
+    });
+    
+    //sending message to a specific socket
+    socket.on('private:msg', function(data) {
+        log('The message: ', data.message);
+        log('The Senders ID - ', data.sender);
+        log('The Receivers ID -', data.receiver);
+        //log('Sending the private message from ',send_id,': ', message ,' to socket id: ' , rec_id);
+        io.sockets.emit('get:pvtmsg', data);
+    });
+    
     //handle client disconnect
     socket.on('disconnect', function() {
+        log('User disconnected');
         //delete the assigned username from the list of users
         console.log(socket.username + ' has disconnected.');
         delete usernames[socket.username];
-        
         //update username list
         io.sockets.emit('update:user', usernames);
+        userNumber--;
         
+        //delete the peer id 
+        delete peerIds[socket.pid];
+        //update the peer id list
+        io.sockets.emit('get:pid', peerIds);
         //global text echo that user left
         socket.broadcast.emit('update:chat', 'SERVER', socket.username + ' has disconnected.');
+        
+        //hangup on a call associated with the quitting peer
+        socket.broadcast.emit('message', 'bye');
         socket.leave(socket.room);
     });
     
-
+    //change peer id
+    socket.on('update:pid', function(pid) {
+        log('updating pid');
+        //delete old pid
+        delete peerIds[socket.pid];
+        
+        //store the peer id
+        socket.pid = pid;
+        peerIds[pid] = pid;
+        //send new list of peer ids 
+        io.sockets.emit('get:pid', peerIds);
+    });
     
-    socket.on('test', function(data){
-        console.log('Button works!');
-    })
+    //------------------------------
+    //testing some functionality
+    socket.on('test', function() {
+       socket.broadcast.emit('testing'); 
+    });
+    
+    socket.on('make:request', function(clientId) {
+        io.sockets.emit('got:requested', clientId);
+    });
 });
