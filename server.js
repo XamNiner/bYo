@@ -44,9 +44,6 @@ io.on('connection', function (socket) {
     
     //client emits add:user to add new user to the room
     socket.on('add:user', function(username) {
-        //give the user a unique id
-        socket.broadcast.emit('add:id', id);
-        id++;
         userNumber++;
         console.log('next id is '+id);
         console.log('added new user');
@@ -158,7 +155,8 @@ io.on('connection', function (socket) {
        socket.broadcast.emit('testing'); 
     });
     
-    socket.on('make:request', function(clientId) {
-        io.sockets.emit('got:requested', clientId);
+    //test for direct connection
+    socket.on('sdp', function(data) {
+        io.sockets.emit('rtc:msg', data);
     });
 });

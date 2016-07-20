@@ -36,7 +36,7 @@
       </div>
     </nav>
     
-    <div ng-controller="ChatCtrl">
+    <div ng-controller="chatCtrl">
         <div ng-show="noMedia">
             <h2>Can't stream Video because getUserMedia is not available in your browser.</h2>
             <h2>Please use Firefox or Chrome!</h2>
@@ -53,14 +53,13 @@
                 <video id="remoteVideo" autoplay></video>
                 <div class="btn-group">
                     <button type="button" class="btn btn-primary" ng-click="getLocalVideo()">Local</button>
-                    <button type="button" class="btn btn-primary" ng-click="onCall()" ng-disabled="gumedia">Call</button>
-                    <button type="button" class="btn btn-primary" ng-click="hangUp()" ng-disabled="!inCall">Hang Up</button>
+                    <button type="button" class="btn btn-primary" ng-click="hangUp()" ng-disabled="!inCall">End Call</button>
                 </div>
             </div>
         </div> 
         <div>
             <input type="text" placeholder="Call user id..." ng-model="peerId">
-            <button type="button" class="btn btn-primary" ng-click="sendRequest()" ng-disabled="gumedia">Request</button>
+            <button type="button" class="btn btn-primary" ng-click="sendRequest()" ng-disabled="gumedia">Call Peer</button>
         </div>
         <br>
         <br>
@@ -98,7 +97,9 @@
     </div>
     <script src="http://cdn.peerjs.com/0.3/peer.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="adapter.js"></script>
+    <script src="lib/adapter.js"></script>
+    <script src="app.js"></script>
+    <script src="socket.js"></script>
     <script src="chat.js"></script>
 </body>    
 </html>
