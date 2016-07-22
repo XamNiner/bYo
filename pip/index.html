@@ -36,48 +36,56 @@
       </div>
     </nav>
     
-    <div ng-controller="chatCtrl">
-        <div ng-show="noMedia">
+    <div ng-controller="ChatCtrl as chat">
+        <div ng-show="chat.noMedia">
             <h2>Can't stream Video because getUserMedia is not available in your browser.</h2>
             <h2>Please use Firefox or Chrome!</h2>
         </div>
         
-        <div ng-show="noCamera">Access to camera was not granted. Please reload your browser and press allow when asked for permission!
+        <div ng-show="chat.noCamera">Access to camera was not granted. Please reload your browser and press allow when asked for permission!
         </div>
         
-        <div class="container" ng-show="!noMedia">
+        <div class="container" ng-show="!chat.noMedia">
             <div class="jumbotron">
                 <h2>LocalVideo</h2>
-                <video id="localVideo" autoplay muted></video>
+                <video id="localVideo" autoplay muted controls></video>
                 <h2>Remote Video</h2>
-                <video id="remoteVideo" autoplay></video>
+                <video id="remoteVideo" autoplay controls></video>
+                <h2>Photo</h2>
+                <canvas id="photo"></canvas>
+                <div id="incoming">
+                <h2>Incoming Photos</h2>
+                <div id="trail"></div>
+                </div>
                 <div class="btn-group">
-                    <button type="button" class="btn btn-primary" ng-click="getLocalVideo()">Local</button>
-                    <button type="button" class="btn btn-primary" ng-click="hangUp()" ng-disabled="!inCall">End Call</button>
+                    <button type="button" class="btn btn-primary" ng-click="chat.getLocalVideo()">Local</button>
+                    <button type="button" class="btn btn-primary" ng-click="chat.snapPhoto()" ng-disabled="!chat.canPhoto">Snap</button>
+                    <button type="button" class="btn btn-primary" ng-click="chat.sendPhoto()" ng-disabled="!chat.picReady">Send Photo</button>
                 </div>
             </div>
         </div> 
         <div>
-            <input type="text" placeholder="Call user id..." ng-model="peerId">
-            <button type="button" class="btn btn-primary" ng-click="sendRequest()" ng-disabled="gumedia">Call Peer</button>
+            <input type="text" placeholder="Call user id..." ng-model="chat.peerId">
+            <button type="button" class="btn btn-primary" ng-click="chat.sendRequest()" ng-disabled="chat.gumedia">Call Peer</button>
+            <button type="button" class="btn btn-primary" ng-click="chat.hangUp()" ng-disabled="!chat.inCall">End Call</button>
         </div>
         <br>
         <br>
         <div ng-show="!noMedia">
-            <input type="text" placeholder="Set your id..." ng-model="ownId">
-            <button type="button" class="btn btn-primary" ng-click="makeId()">Set Peer Id</button>
+            <input type="text" placeholder="Set your id..." ng-model="chat.ownId">
+            <button type="button" class="btn btn-primary" ng-click="chat.makeId()">Set Peer Id</button>
         </div>
-        <p>Peer ID: {{setId}}</p>
+        <p>Peer ID: {{chat.setId}}</p>
         <div>
             <h2>Usernames:</h2>
             <ul>
-                <li ng-repeat="user in userNames track by $index">{{user}}</li>
+                <li ng-repeat="user in chat.userNames track by $index">{{user}}</li>
             </ul>
         </div>
         <div>
             <h2>Peer Ids:</h2>
             <ul>
-                <li ng-repeat="ids in pids track by $index">{{ids}}</li>
+                <li ng-repeat="ids in chat.pids track by $index">{{ids}}</li>
             </ul>
         </div>
        <!-- <select ng-model="selectedName" ng-options="user in userNames"></select> !-->

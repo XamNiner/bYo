@@ -1,32 +1,39 @@
+//Immediately Invoked Function Expression (IIFE)
+(function() {
 'use strict';
 
 angular.module('chatApp')
-.controller('chatCtrl', function($scope, socket) {
+.controller('ChatCtrl', function($scope, socket) {
+    //view model to encapsulate $scope using controllerAs
+    var vm = this;
+    
     //client side implementation
-    $scope.userNames = [];      //list of usernames
+    vm.userNames = [];          //list of usernames
+    vm.name = null;             //own name
     var channelReady = false;   //check if localStream is available before calling
     var praxis = 'pr23';        //praxis number to create a peer id
     
-    $scope.name = null;         //own name
-    
     //show warning if no user media found or camera access granted
-    $scope.noMedia = false;
-    $scope.noCamera = false;
+    vm.noMedia = false;
+    vm.noCamera = false;
     //client states
-    $scope.gumedia = true;
-    $scope.inCall = false;
+    vm.gumedia = true;      //is client capable of using getUserMedia?
+    vm.inCall = false;      //is client currently being called?
+    vm.pids;                //Peer Ids of all connected clients 
     
+    //stream elements to be displayed on the web page
     var localVideo = document.getElementById('localVideo'),
         remoteVideo = document.getElementById('remoteVideo');
     
     //send peer connection request to this id
-    $scope.peerId;  //id of the object to be called
-    $scope.ownId;   //set last id numbers yourself 
-    $scope.setId = 42; //standard
-    $scope.accepted = false; //has client answered a peer request?
+    vm.peerId;  //id of the object to be called
+    vm.ownId;   //set last id numbers yourself 
+    vm.setId = praxis+''+vm.name+''+42; //standard
+    vm.accepted = false; //has client answered a peer request?
     
     //Id of the other peer
-    $scope.partnerId;
+    vm.partnerId;
+    
     var isChannelReady = false, //is client able to stream media?
         isInitiator = false,    //has client initiated the call?
         isStarted = false;      //is media being streamed to another peer?
@@ -50,19 +57,26 @@ angular.module('chatApp')
     };
     
     //-----------------------------------------------------------------
+    //view model functions
+    //-----------------------------------------------------------------
+    vm.getLocalVideo = getLocalVideo;   //receive local media stream
+    vm.makeId = makeId;                 //create your own peer id
+    vm.sendRequest = sendRequest;       //request connection with peer
+    vm.hangUp = hangUp;                 //end a current call
+    //-----------------------------------------------------------------
     //Socket io event handling
     //-----------------------------------------------------------------
     
     //check if getUserMedia is available
     if (navigator.mediaDevices === undefined) {
-            $scope.noMedia = true;
+            vm.noMedia = true;
     }
     
     //ask for username upon connection
     socket.on('connect', function() {
         //prompt user to enter a username
-       $scope.name = prompt('Enter a username!');
-        socket.emit('add:user', $scope.name);
+       vm.name = prompt('Enter a username!');
+        socket.emit('add:user', vm.name);
     });
     
     //listen for chat updates from the server
@@ -72,7 +86,7 @@ angular.module('chatApp')
     
     //listen for user changes
     socket.on('update:user', function(uData) {
-        $scope.userNames = uData;
+        vm.userNames = uData;
     });
     
     //listen for room changes
@@ -90,7 +104,7 @@ angular.module('chatApp')
     //show Ids of all connected peers(+ own)
     socket.on('get:pid', function(peerIds) {
         console.log('updating the peer ids');
-        $scope.pids = peerIds; 
+        vm.pids = peerIds; 
     });
     
     // This client receives a message
@@ -110,7 +124,7 @@ angular.module('chatApp')
     //deal with private messages
     socket.on('get:pvtmsg', function(data) {
         //handle private message exchange between peers
-        if (data.receiver === $scope.setId) {
+        if (data.receiver === vm.setId) {
             console.log('Got the right client');
             if (data.message === 'request') {
                 console.log('>>>>>>>>>>>request start');
@@ -142,8 +156,8 @@ angular.module('chatApp')
     //rtc handshake
     socket.on('rtc:msg', function(data) {
         //check if correct client
-        if (data.receiver === $scope.setId) {
-            $scope.partnerId = data.sender;
+        if (data.receiver === vm.setId) {
+            vm.partnerId = data.sender;
             if (data.message === 'offer') {
                 console.log('Received a new offer from a peer');
                 if (!isInitiator && !isStarted) {
@@ -206,13 +220,12 @@ angular.module('chatApp')
     //init a new peer connection upon receiving an sdp offer
     function beginAnswering() {
         console.log('Channel is ready: '+ isChannelReady);
-        //receiveLocalVideo();
         console.log('Started: '+isStarted+' LocalStream: '+ localStream +' Channel Ready? '+ isChannelReady);
         if (!isStarted && typeof localStream !== 'undefined' && isChannelReady) {
             console.log('ENTERED!!!')
             //change button access - able to hang up on the caller
-            $scope.gumedia = true;
-            $scope.inCall = true;
+            vm.gumedia = true;
+            vm.inCall = true;
         
             //create new RTCPeerConnection
         
@@ -226,24 +239,26 @@ angular.module('chatApp')
     //-----------------------------------------------------------------
     
     //function for button click
-    $scope.getLocalVideo = function(){
+    function getLocalVideo(){
         receiveLocalVideo();
+        //able to take pictures
+        vm.canPhoto = true;
     }
 
     function receiveLocalVideo() {
         if (navigator.mediaDevices.getUserMedia !== 'undefined') {
             //get the video stream
-            $scope.gumedia = false;
+            vm.gumedia = false;
             console.log('getUserMedia active');
             navigator.mediaDevices.getUserMedia({audio: true, video: true})
             .then(createStream)
             .catch(function(e) {
-                $scope.noCamera = true;
+                vm.noCamera = true;
                 alert('getUserMedia error: ' + e.name);
             });
             console.log('AFTER STREAM');
         } else {
-            $scope.noMedia = true;
+            vm.noMedia = true;
             console.log('getUserMedia is not supported in this browser!');
         }
     }
@@ -253,7 +268,10 @@ angular.module('chatApp')
         localVideo.src = window.URL.createObjectURL(stream);
         localStream = stream;
         console.log('The local stream has been initialized: '+localStream);
-        sendMessage('got user media');
+        //sendMessage('got user media');
+        //set photo dimensions
+        //localVideo.onloadmetadata = function() {
+        //}
         //got local stream --> can begin calling other peers
         isChannelReady = true;
     }
@@ -264,33 +282,39 @@ angular.module('chatApp')
     //-----------------------------------------------------------------
     
     //add your own id suffix
-    $scope.makeId = function() {
+    function makeId() {
         //create an id from praxis number, username and suffix
         //complete version
-        $scope.setId = praxis+''+$scope.name+''+$scope.ownId;
-        console.log('Setting own id from '+$scope.setId+' to '+$scope.ownId);
+        vm.setId = praxis+''+vm.name+''+vm.ownId;
+        console.log('Setting own id from '+vm.setId+' to '+vm.ownId);
         //send complete peer id to all clients
-        socket.emit('update:pid', $scope.setId);
+        socket.emit('update:pid', vm.setId);
     }
     
     //request a peer connection from another client
-    $scope.sendRequest = function() {
+    function sendRequest() {
         console.log('sending request to establish peer connection');
         var message = 'request';
-        console.log('Check - '+$scope.setId+' - '+$scope.peerId);
-        var a = $scope.setId,
-            b = $scope.peerId,
+        console.log('Check - '+vm.setId+' - '+vm.peerId);
+        //dont request yourself
+        if (vm.peerId !== vm.setId) {
+            var a = vm.setId,
+            b = vm.peerId,
             data = {
                 sender: a,
                 receiver: b,
                 message: message
             };
-        sendPrivateMessage(data);
-        console.log('Value in peerId '+$scope.peerId);
+            sendPrivateMessage(data);
+            console.log('Value in peerId '+vm.peerId);   
+        } else {
+            console.log('You requested yourself');
+            window.alert("You requested a connection with yourself. Please choose another peer Id.");
+        }
     }
     
     function startRequest(data) {
-        if (isChannelReady && !$scope.inCall) {
+        if (isChannelReady && !vm.inCall) {
             var p = window.confirm("Peer Id: "+data.sender+" requests a peer connection. Accept?");
             if (p == true) {
                 //accepted
@@ -314,7 +338,7 @@ angular.module('chatApp')
                 };
                 sendPrivateMessage(denied);
             }    
-        } else if (isChannelReady && $scope.inCall){
+        } else if (isChannelReady && vm.inCall){
             console.log('Another peer called while in p2p call Id: '+data.sender);
             var inCall = {
                 sender: data.receiver,
@@ -360,17 +384,16 @@ angular.module('chatApp')
         console.log('Begin of new Peer Connection');
         if (!isStarted && typeof localStream !== 'undefined' && isChannelReady) {
             //change button access
-            $scope.gumedia = true;
-            $scope.inCall = true;
+            vm.gumedia = true;
+            vm.inCall = true;
             
             //new connection
-            createPeerConnection();
-            pc.addStream(localStream);
             isStarted = true;
             isInitiator = true;
+            createPeerConnection();
+            pc.addStream(localStream);
             
             //create the offer
-            //doCall();
             startOffer(data);
         }
     }
@@ -384,6 +407,19 @@ angular.module('chatApp')
             pc.onicecandidate = handleIceCandidate;
             pc.onaddstream = handleRemoteStreamAdded;
             pc.onremovestream = handleRemoteStreamRemove;
+            if (isInitiator) {
+                console.log('Creating Data Channel');
+                dataChannel = pc.createDataChannel('photos');
+                onDataChannelCreated(dataChannel);
+
+                console.log('Creating an offer');
+            } else {
+                pc.ondatachannel = function(event) {
+                console.log('ondatachannel:', event.channel);
+                dataChannel = event.channel;
+                onDataChannelCreated(dataChannel);
+              };
+            }
         }catch (e) {
             console.log('Failed to create PeerConnection, exception: ' + e.message);
             alert('Cannot create RTCPeerConnection object.');
@@ -437,7 +473,7 @@ angular.module('chatApp')
     //offer creation
     function startOffer(data) {
         console.log('Sending offer to peer');
-        $scope.partnerId = data.receiver;
+        vm.partnerId = data.receiver;
         pc.createOffer(localAndSendPvtMsg, handleCreateOfferError);
     }
     
@@ -452,8 +488,8 @@ angular.module('chatApp')
     function sendRTCMessage(sessionDescription) {
         //send the local session description via socketio to the other peer
         var data = {
-            sender: $scope.setId,
-            receiver: $scope.partnerId,
+            sender: vm.setId,
+            receiver: vm.partnerId,
             message: sessionDescription.type,
             session: sessionDescription
         }
@@ -470,8 +506,8 @@ angular.module('chatApp')
         if (!isStarted && typeof localStream !== 'undefined' && isChannelReady) {
             console.log('Started Call Answer');
             //change button access - able to hang up on the caller
-            $scope.gumedia = true;
-            $scope.inCall = true;
+            vm.gumedia = true;
+            vm.inCall = true;
         
             //create new RTCPeerConnection
         
@@ -493,7 +529,7 @@ angular.module('chatApp')
     //-----------------------------------------------------------------
     
     //stop a running p2p call
-    $scope.hangUp = function() {
+    function hangUp() {
         console.log('Stopping the running call');
         stop();
         //disable hangup allow calling again
@@ -512,8 +548,8 @@ angular.module('chatApp')
         console.log('Stopping peer connection');
         isStarted = false;
         isInitiator = false;
-        $scope.gumedia = !$scope.gumedia;
-        $scope.inCall = false;
+        vm.gumedia = !vm.gumedia;
+        vm.inCall = false;
         //close the connection
         //pc.removeStream(remoteStream);
         remoteStream.getAudioTracks()[0].stop();
@@ -526,4 +562,161 @@ angular.module('chatApp')
     window.onbeforeunload = function() {
         sendMessage('bye');
     }
+    
+    //-----------------------------------------------------------------
+    //capture a picture and send it over the RTC data channel
+    //-----------------------------------------------------------------
+    var photo = document.getElementById('photo');
+    var trail = document.getElementById('trail');
+    var photoContext = photo.getContext('2d'); 
+    //set picture dimensions
+    var photoContextW,
+        photoContextH;
+    
+    //the data channel to send byte data through
+    var dataChannel;
+    
+    //picture ready to send
+    vm.canPhoto = false;
+    vm.picReady = false;
+    vm.picSendReady = false;
+    
+    vm.snapPhoto = snapPhoto;
+    vm.sendPhoto = sendPhoto;
+    
+    function snapPhoto() {
+        adjustCanvasSize(localVideo);
+        photoContext.drawImage(localVideo, 0, 0, photo.width, photo.height);
+        vm.picReady = true;
+    }
+    
+    function sendPhoto() {
+        //check if in call and a photo is available
+        if (vm.picReady && vm.inCall) {
+            //split data in 64KB chunks
+            var CHUNK_LEN = 64000;
+            var img = photoContext.getImageData(0, 0, photoContextW, photoContextH),
+                len = img.data.byteLength,  //number of bytes to send
+                n = len / CHUNK_LEN | 0;    //number of chunks
+            
+            console.log('Sending a total of '+len+' bytes');
+            //send image data
+            dataChannel.send(len);
+            
+            //send individual chunks
+            for (var i = 0; i < n; i++) {
+                var start = i * CHUNK_LEN,
+                    end = (i + 1) * CHUNK_LEN;
+                console.log(start+' - '+ (end - 1));
+                dataChannel.send(img.data.subarray(start, end));
+            }
+            
+            //send any rest
+            if (len % CHUNK_LEN) {
+                console.log('last '+len % CHUNK_LEN+' bytes');
+                dataChannel.send(img.data.subarray(n * CHUNK_LEN));
+            }
+        }
+    }
+    
+    //create the data channel to send images
+    function onDataChannelCreated(channel) {
+        console.log('Created Data Channel:', channel);
+
+        channel.onopen = function() {
+        console.log('CHANNEL has been opened!!!');
+        };
+
+        channel.onmessage = (adapter.browserDetails.browser === 'firefox') ?
+        receiveDataFirefoxFactory() : receiveDataChromeFactory();
+    }
+    
+    function receiveDataChromeFactory() {
+        var buf, count;
+
+        return function onmessage(event) {
+        if (typeof event.data === 'string') {
+            buf = window.buf = new Uint8ClampedArray(parseInt(event.data));
+            count = 0;
+            console.log('Expecting a total of ' + buf.byteLength + ' bytes');
+            return;
+        }
+
+        var data = new Uint8ClampedArray(event.data);
+        buf.set(data, count);
+
+        count += data.byteLength;
+        console.log('count: ' + count);
+
+        if (count === buf.byteLength) {
+        // we're done: all data chunks have been received
+        console.log('Done. Rendering photo.');
+        renderPhoto(buf);
+        }
+        };
+    }
+
+    function receiveDataFirefoxFactory() {
+      var count, total, parts;
+
+      return function onmessage(event) {
+        if (typeof event.data === 'string') {
+          total = parseInt(event.data);
+          parts = [];
+          count = 0;
+          console.log('Expecting a total of ' + total + ' bytes');
+          return;
+        }
+
+        parts.push(event.data);
+        count += event.data.size;
+        console.log('Got ' + event.data.size + ' byte(s), ' + (total - count) +
+                    ' to go.');
+
+        if (count === total) {
+          console.log('Assembling payload');
+          var buf = new Uint8ClampedArray(total);
+          var compose = function(i, pos) {
+            var reader = new FileReader();
+            reader.onload = function() {
+              buf.set(new Uint8ClampedArray(this.result), pos);
+              if (i + 1 === parts.length) {
+                console.log('Done. Rendering photo.');
+                renderPhoto(buf);
+              } else {
+                compose(i + 1, pos + this.result.byteLength);
+              }
+            };
+            reader.readAsArrayBuffer(parts[i]);
+          };
+          compose(0, 0);
+        }
+      };
+    }
+    
+    //receiving photo data through the rtc data channel
+    function renderPhoto(data) {
+        adjustCanvasSize(remoteVideo);
+        var canvas = document.createElement('canvas');
+        canvas.width = photoContextW;
+        canvas.height = photoContextH;
+        canvas.classList.add('incomingPhoto');
+        // trail is the element holding the incoming images
+        trail.insertBefore(canvas, trail.firstChild);
+
+        var context = canvas.getContext('2d');
+        var img = context.createImageData(photoContextW, photoContextH);
+        img.data.set(data);
+        context.putImageData(img, 0, 0);    
+    }
+    
+    function adjustCanvasSize(video) {
+        var h = video.videoHeight;
+        var w = video.videoWidth;
+        photo.width = photoContextW = w;
+        photo.height = photoContextH = h;
+        console.log('Height '+h+' Width '+w); 
+    }
 })
+    
+})();

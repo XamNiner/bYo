@@ -1,3 +1,5 @@
+//Immediately Invoked Function Expression (IIFE)
+(function() {
 'use strict';
 
 angular.module('chatApp')
@@ -24,3 +26,5 @@ angular.module('chatApp')
     }
   };
 });
+    
+})();

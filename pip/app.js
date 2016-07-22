@@ -2,12 +2,13 @@
 
 /**
  * @ngdoc overview
- * @name bYoApp
+ * @name chatApp
  * @description
- * # bYoApp
+ * # chatApp
  *
  * Main module of the application.
  */
 angular
-  .module('chatApp', [])
+  .module('chatApp', [
+    ]);
   
