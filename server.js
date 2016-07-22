@@ -132,7 +132,7 @@ io.on('connection', function (socket) {
         socket.broadcast.emit('update:chat', 'SERVER', socket.username + ' has disconnected.');
         
         //hangup on a call associated with the quitting peer
-        socket.broadcast.emit('message', 'bye');
+        //socket.broadcast.emit('message', 'bye');
         socket.leave(socket.room);
     });
     

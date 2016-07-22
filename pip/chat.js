@@ -117,7 +117,7 @@ angular.module('chatApp')
             });
             pc.addIceCandidate(candidate);
         } else if (message === 'bye' && isStarted) {
-            handleRemoteHangup();
+            //handleRemoteHangup();
         }
     });
     
@@ -147,6 +147,8 @@ angular.module('chatApp')
                 console.log('The requested client is not ready to establish a p2p connection.');
                 //display warning
                 window.alert('The requested client is not yet ready to establish a connection. Please try again later.');
+            } else if (data.message === 'bye' && isStarted) {
+                handleRemoteHangup();
             } else {
                 console.log('Received remote message!');
             } 
@@ -226,7 +228,9 @@ angular.module('chatApp')
             //change button access - able to hang up on the caller
             vm.gumedia = true;
             vm.inCall = true;
-        
+            if (vm.picReady) {
+                vm.picSendReady = true;
+            }
             //create new RTCPeerConnection
         
             createPeerConnection();
@@ -386,7 +390,9 @@ angular.module('chatApp')
             //change button access
             vm.gumedia = true;
             vm.inCall = true;
-            
+            if (vm.picReady) {
+                vm.picSendReady = true;
+            }
             //new connection
             isStarted = true;
             isInitiator = true;
@@ -508,7 +514,9 @@ angular.module('chatApp')
             //change button access - able to hang up on the caller
             vm.gumedia = true;
             vm.inCall = true;
-        
+            if (vm.picReady) {
+                vm.sendPicReady = true;
+            }
             //create new RTCPeerConnection
         
             createPeerConnection();
@@ -533,15 +541,18 @@ angular.module('chatApp')
         console.log('Stopping the running call');
         stop();
         //disable hangup allow calling again
-        sendMessage('bye');
+        var quitData = {
+            sender: vm.setId,
+            receiver: vm.partnerId,
+            message: 'bye'
+        }
+        sendPrivateMessage(quitData);
     };
     
     //the caller has ended the call
     function handleRemoteHangup() {
         console.log('Caller has ended the call');
-        if (isStarted) {
-            stop();    
-        }
+        stop();    
     }
     
     function stop() {
@@ -550,17 +561,28 @@ angular.module('chatApp')
         isInitiator = false;
         vm.gumedia = !vm.gumedia;
         vm.inCall = false;
+        vm.picSendReady = false;
         //close the connection
         //pc.removeStream(remoteStream);
-        remoteStream.getAudioTracks()[0].stop();
-        remoteStream.getVideoTracks()[0].stop();
+        //check if tracks are available
+        try {
+            remoteStream.getAudioTracks()[0].stop();
+            remoteStream.getVideoTracks()[0].stop();  
+        }catch (e) {
+            console.log('Error closing the stream tracks '+e);
+        }
         pc.close;
         pc = null;
     }
     
     //end any calls when reloading or closing the page
     window.onbeforeunload = function() {
-        sendMessage('bye');
+        var quitData = {
+            sender: vm.setId,
+            receiver: vm.partnerId,
+            message: 'bye'
+        }
+        sendPrivateMessage(quitData);
     }
     
     //-----------------------------------------------------------------
@@ -588,6 +610,9 @@ angular.module('chatApp')
         adjustCanvasSize(localVideo);
         photoContext.drawImage(localVideo, 0, 0, photo.width, photo.height);
         vm.picReady = true;
+        if (vm.inCall) {
+            vm.picSendReady = true;
+        }
     }
     
     function sendPhoto() {
@@ -718,5 +743,4 @@ angular.module('chatApp')
         console.log('Height '+h+' Width '+w); 
     }
 })
-    
 })();
